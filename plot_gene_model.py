@@ -74,22 +74,63 @@ def extract_genes(gff, colors_d):
     return genes
 
 
-def svg(in_coords, out_file, fig_width, fig_height):
-    plot = svgwrite.Drawing(out_file, size=(fig_width, fig_height))
-    css = "{font-size:14px;font-family:'sans-serif'}"
-    exon_height = fig_height
-    gene_group = plot.add(plot.g(id="gene"))
-    # Normalize the sizes so that they fit in the image
-    last_end_coord = in_coords[-1][1]
-    norm = fig_width / last_end_coord
-    middle_line = exon_height / 2
-    #line_style = "stroke:#000000;stroke-opacity:1"
-    plot.add(plot.line(start=(0,middle_line), end=(fig_width, middle_line),stroke_width=50,stroke_opacity=1,stroke="black"))
-    for start, end in in_coords:
-        gene_group.add(plot.rect(insert=(start * norm, 0),
-                                 size=(end * norm - start * norm, exon_height),fill="coral"))
-    plot.save(pretty=True)
+def parse_txt_css(css):
+    font_params = {}
+    parse = False
+    for line in open(css):
+        if parse:
+            if "font-size" or "font-family" in line:
+                param, value = line.strip().replace(";", "").split(": ")
+                font_params[param] = value
+            if len(font_params) ==2:
+                break
+        if ".name" in line:
+            parse = True
+    return font_params
 
+
+def plot_gene(gene, coords, plot_obj, norm, gene_height, text_space, font_params):
+    exon_height = gene_height
+    fig_width = plot_obj.attribs["width"]
+    middle_line = exon_height / 2
+    gene_group = plot_obj.add(plot_obj.g(id="gene"))
+    gene_len = max([x[-1] for x in coords]) * norm
+    gene_group.add(plot_obj.line(start=(0,middle_line), end=(gene_len, middle_line), class_="line"))
+    # Normalize the sizes so that they fit in the image
+    last_end_coord = coords[-1][1]
+    #norm = fig_width / last_end_coord
+    for start, end in coords:
+        gene_group.add(plot_obj.rect(insert=(start * norm, 0), class_="exon",
+                                 size=(end * norm - start * norm, exon_height)))
+    font = font_params["font-family"]
+    font_size = int(font_params["font-size"].replace("px", ""))
+    txt_w, txt_h = get_text_metrics(font, font_size, gene)
+    txt_y = middle_line #+ (txt_h / 2)
+    txt = plot_obj.text("", insert=(end * norm + text_space, txt_y))
+    txt.add(plot_obj.tspan(gene, dy=["0.5em"], class_="name"))
+    gene_group.add(txt)
+
+
+def plot_genes(genes_d, css_file, outfile, fig_width, gene_height, gene_space=10, text_space=2):
+    total_height = gene_height * len(genes_d) + gene_space * (len(genes_d) - 1)
+    font_params = parse_txt_css(css_file)
+    font = font_params["font-family"]
+    font_size = int(font_params["font-size"].replace("px", ""))
+    max_txt_len = max([get_text_metrics(font, font_size, x)[0] for x in genes_d.keys()])
+    total_width = fig_width + max_txt_len + text_space
+    plot = svgwrite.Drawing(outfile, size=(total_width, total_height))
+    css = open(css_file).read()
+    plot.embed_stylesheet(css)
+    longest_gene = max([x[-1][1] for x in genes_d.values()])
+    norm = fig_width / longest_gene
+    for gene, coords in genes_d.items():
+        plot_gene(gene, coords, plot, norm, gene_height, text_space, font_params)
+    # Organize genes
+    moved_space = 0
+    for ix, gene in enumerate(plot.elements[1:]):
+        gene.translate(0, moved_space)
+        moved_space += (gene_height + gene_space)
+    plot.save()
 
 gff = argv[1]
 
@@ -100,5 +141,5 @@ else:
     color_specs = False
 
 genes = extract_genes(gff, color_specs)
-svg(genes["Chipu0000003.t1"], "delete.svg", 1000, 300)
+plot_genes(genes, "style.css", "delete.svg", 500, 50)
 print("DONE")
