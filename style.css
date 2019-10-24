@@ -3,14 +3,14 @@
 	font-family: sans-serif;
   text-anchor: start;
   alignment-baseline: middle;
+
 }
 .exon {
 	fill: #EB4034;
 }
 .line {
-	stroke: black;
+	stroke: #000000;
 	stroke-width: 2px;
   stroke-opacity: 1;
-
 }
 

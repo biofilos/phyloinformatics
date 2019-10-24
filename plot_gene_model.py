@@ -3,7 +3,7 @@ Given a GFF file, plot the genes in it in a SVG file
 Optional: specify colors for gene features (exons, introns, etc)
 in a JSON file
 Usage:
-python plot_gene_model.py <gff_file> <json_color_specs optional>
+python plot_gene_model.py <gff_file> width height <out_file.svg>
 
 Notes:
     The GFF must have at least "gene" and "transcript" types (column 3)
@@ -11,39 +11,45 @@ Notes:
 
 from BCBio import GFF
 from sys import argv
-import json
+#import json
 import os
 from ipdb import set_trace
 import svgwrite
-import tkinter as Tkinter
+#import tkinter as Tkinter
+import cairo
+#try:
+#    import tkFont
+#except ImportError:
+#    import tkinter.font as tkFont
 
-try:
-    import tkFont
-except ImportError:
-    import tkinter.font as tkFont
+##def get_text_metrics(family, size, text):
+##    # initialize Tk so that font metrics will work
+##    tk_root = Tkinter.Tk()
+##    font = None
+##    key = (family, size)
+##    font = tkFont.Font(family=family, size=size)
+##    assert font is not None
+##    (w, h) = (font.measure(text), font.metrics('linespace'))
+##    return w
+def get_text_metrics(font, fontsize, text):
+    tempfile = "draft.svg"
+    surface = cairo.SVGSurface(tempfile, 1280, 200)
+    cr = cairo.Context(surface)
+    cr.select_font_face(font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    cr.set_font_size(fontsize)
+    xbearing, ybearing, width, height, xadvance, yadvance = cr.text_extents(text)
+    os.remove(tempfile)
+    return width
 
-def get_text_metrics(family, size, text):
-    # initialize Tk so that font metrics will work
-    tk_root = Tkinter.Tk()
-    font = None
-    key = (family, size)
-    font = tkFont.Font(family=family, size=size)
-    assert font is not None
-    (w, h) = (font.measure(text), font.metrics('linespace'))
-    return (w, h)
-def extract_genes(gff, colors_d):
+def extract_genes(gff):
     """
     Extract gene models from gff files. If a color_specs file
     is provided, include the features specified in the
     color_specs file
     :param gff: path to gff file
-    :param colors_d: dictionary of color specifications: {"feature": "color"}
     :return: list of BCBio genes
     """
-    if colors_d:
-        features = color_specs.keys()
-    else:
-        features = ["CDS"]
+    features = ["CDS"]
     genes = {}
     feature_limits = dict(gff_type=features + ["gene", "transcript"])
     for rec in GFF.parse(gff, limit_info=feature_limits):
@@ -104,10 +110,10 @@ def plot_gene(gene, coords, plot_obj, norm, gene_height, text_space, font_params
                                  size=(end * norm - start * norm, exon_height)))
     font = font_params["font-family"]
     font_size = int(font_params["font-size"].replace("px", ""))
-    txt_w, txt_h = get_text_metrics(font, font_size, gene)
+    txt_w = get_text_metrics(font, font_size, gene)
     txt_y = middle_line #+ (txt_h / 2)
     txt = plot_obj.text("", insert=(end * norm + text_space, txt_y))
-    txt.add(plot_obj.tspan(gene, dy=["0.5em"], class_="name"))
+    txt.add(plot_obj.tspan(gene, dy=["0.35em"], class_="name"))
     gene_group.add(txt)
 
 
@@ -116,7 +122,7 @@ def plot_genes(genes_d, css_file, outfile, fig_width, gene_height, gene_space=10
     font_params = parse_txt_css(css_file)
     font = font_params["font-family"]
     font_size = int(font_params["font-size"].replace("px", ""))
-    max_txt_len = max([get_text_metrics(font, font_size, x)[0] for x in genes_d.keys()])
+    max_txt_len = max([get_text_metrics(font, font_size, x) for x in genes_d.keys()])
     total_width = fig_width + max_txt_len + text_space
     plot = svgwrite.Drawing(outfile, size=(total_width, total_height))
     css = open(css_file).read()
@@ -133,13 +139,10 @@ def plot_genes(genes_d, css_file, outfile, fig_width, gene_height, gene_space=10
     plot.save()
 
 gff = argv[1]
+width = int(argv[2])
+height = int(argv[3])
+svg_out = argv[4]
 
-if len(argv) == 3 and os.path.exists(argv[2]):
-    json_path = argv[2]
-    color_specs = json.load(open(json_path))
-else:
-    color_specs = False
-
-genes = extract_genes(gff, color_specs)
-plot_genes(genes, "style.css", "delete.svg", 500, 50)
+genes = extract_genes(gff)
+plot_genes(genes, "style.css", svg_out, width, height)
 print("DONE")
