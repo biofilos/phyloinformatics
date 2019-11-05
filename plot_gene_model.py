@@ -222,10 +222,10 @@ gff = argv[1]
 width = int(argv[2])
 height = int(argv[3])
 svg_out = argv[4]
-
+style = argv[0].replace("plot_gene_model.py","style.css")
 # Parse GFF as dictionary of genomic coordinates
 genes = extract_genes(gff)
 # Plot genes
-plot_genes(genes, "style.css", svg_out, width, height)
+plot_genes(genes, style, svg_out, width, height)
 # Finish
 print(f"Figure saved: {svg_out}")
