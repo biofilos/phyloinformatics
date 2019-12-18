@@ -30,6 +30,10 @@ The ID attribute of the resulting GFF file follow the format:
 * In gene features: \<sequence id from `query.fa`\>_\<number\>.
 * In cds features: \<gene ID>.\<number\>
 
+### Filtering out overlapping genes
+Althought not common, exonerate can output overlapping genes. In those cases, those overlapping genes could be isoforms (though not necessarily), and the longest of them might be wanted. The script `longest_seq.py` included in this directory provides this functionality. `longest_seq.py` extracts the longest gene from each set of overlapping genes in a GFF, and writes GFF, CDS, and protein files with the non-overlapping genes. Genes that did not overlap are returned as well.  
+Usage: `python longest_seq.py gff_in.gff cds_in.fa protein_in.fa filtered_gff.gff filtered_cds.fa filtered_proteins.fa`
+
 ### IMPORTANT
 By design, the output from exonerate was not processed, only formatted. That means that the resulting coding and protein sequences should be further tested to make sure that they are likely homologs of the query sequence. As a suggestion, the gene legnths of both query and results can be inspected for big discrepancies. Also, domain annotation with Pfam can be performed for both query (and known homologs) and the results of this pipeline. Finally, a shallow phylogenetic analysis of query sequence (and known homologs) can be performed including the results from this pipeline, to test if the phylogenetic relationships between all the sequences are "reasonable".  
 All that said, this is Biology, and well, Biology is complicated. There is no automation bioinformatics tool that can do the work of rigurous scientific reasoning. As such, the last step on this pipeline is your expertise and good judgement.
