@@ -14,7 +14,7 @@ cds_file=$4
 prot_file=$5
 gff_out=$6
 
-
+root_path=$(cd `dirname $0` && pwd)
 # Run exonerate
 
 # Exonerate extra options
@@ -32,4 +32,4 @@ exonerate_gff=$(echo "$exonerate_out" | cut -f 1 -d '.').gff
 # Parse relevant lines from GFF information, and save them 
 cat $exonerate_out | grep -v Command | grep -v Hostname  | grep -v "\-\- completed exonerate analysis" > $exonerate_gff
 # Parse exonerate output and generate sequence files
-python extract_seqs.py $genome $exonerate_gff $cds_file $prot_file $gff_out 
+python ${root_path}/extract_seqs.py $genome $exonerate_gff $cds_file $prot_file $gff_out 
